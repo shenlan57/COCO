@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寅林创客课程报名确认系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        neutral: '#6B7280',
+                        light: '#F3F4F6',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .transition-custom {
+                transition: all 0.3s ease;
+            }
+            .scrollable-courses {
+                max-height: 600px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+            }
+            .scrollable-courses::-webkit-scrollbar {
+                width: 6px;
+            }
+            .scrollable-courses::-webkit-scrollbar-thumb {
+                background-color: rgba(79, 70, 229, 0.5);
+                border-radius: 3px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- 头部导航 -->
+    <header class="bg-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center">
+                <i class="fa fa-graduation-cap mr-2"></i>寅林创客课程报名确认系统
+            </h1>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 家长登录区 -->
+        <section id="parentLogin" class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-center mb-6 text-gray-800">家长登录</h2>
+            <div class="mb-4">
+                <label for="studentName" class="block text-gray-700 mb-2">选择学生姓名</label>
+                <select id="studentName" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="">-- 请选择学生 --</option>
+                    <option value="徐俊恩">徐俊恩</option>
+                    <option value="单烨坾">单烨坾</option>
+                    <option value="徐佳雯">徐佳雯</option>
+                    <option value="佳雯妹妹">佳雯妹妹</option>
+                    <option value="金峻锐">金峻锐</option>
+                    <option value="周靖航">周靖航</option>
+                    <option value="曾一鑫">曾一鑫</option>
+                </select>
+            </div>
+            <button id="parentLoginBtn" class="w-full bg-primary text-white py-3 rounded-md font-medium hover:bg-primary-700 transition-custom">
+                登录
+            </button>
+        </section>
+
+        <!-- 家长确认区 -->
+        <section id="parentArea" class="hidden">
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">课程确认 - <span id="currentStudent"></span></h2>
+                    <button id="parentLogout" class="text-primary hover:text-primary-700 transition-custom">
+                        <i class="fa fa-sign-out mr-1"></i> 退出登录
+                    </button>
+                </div>
+                
+                <div id="parentCourses" class="space-y-6 scrollable-courses">
+                    <!-- 课程将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 寅林创客课程报名确认系统 - 版权所有</p>
+        </div>
+    </footer>
+
+    <script>
+        // 强制清除所有旧数据，确保日期计算正确
+        localStorage.removeItem('confirmationData');
+        
+        // 课程数据 - 精确设置
+        const courses = [
+            {
+                id: 1,
+                name: "SC三级",
+                time: "每周五 19:00-20:30",
+                startDate: "2025-09-12",
+                students: ["徐俊恩", "单烨坾"],
+                weeks: 15
+            },
+            {
+                id: 2,
+                name: "科学创客",
+                time: "每周六 19:00-20:30",
+                startDate: "2025-09-13",
+                students: ["徐佳雯", "佳雯妹妹", "金峻锐", "周靖航", "曾一鑫"],
+                weeks: 15
+            }
+        ];
+
+        // 初始化确认数据
+        let confirmationData = {};
+        
+        // 初始化确认数据结构
+        function initConfirmationData() {
+            courses.forEach(course => {
+                confirmationData[course.id] = {};
+                
+                // 生成每周的课程日期
+                const courseDates = generateCourseDates(course.startDate, course.weeks);
+                
+                courseDates.forEach((date, weekIndex) => {
+                    const weekKey = `week${weekIndex + 1}`;
+                    confirmationData[course.id][weekKey] = {
+                        date: date,
+                        students: {}
+                    };
+                    
+                    // 为每个学生初始化状态为未确认
+                    course.students.forEach(student => {
+                        confirmationData[course.id][weekKey].students[student] = null;
+                    });
+                });
+            });
+            
+            // 保存到本地存储
+            saveConfirmationData();
+        }
+
+        // 生成课程日期
+        function generateCourseDates(startDate, weeks) {
+            const dates = [];
+            const start = new Date(startDate);
+            
+            for (let i = 0; i < weeks; i++) {
+                const current = new Date(start);
+                current.setDate(start.getDate() + (i * 7));
+                const dateStr = current.toISOString().split('T')[0];
+                dates.push(dateStr);
+            }
+            
+            return dates;
+        }
+
+        // 保存确认数据到本地存储
+        function saveConfirmationData() {
+            localStorage.setItem('confirmationData', JSON.stringify(confirmationData));
+        }
+
+        // 家长登录功能 - 修复部分
+        document.addEventListener('DOMContentLoaded', function() {
+            // 家长登录按钮事件
+            document.getElementById('parentLoginBtn').addEventListener('click', function() {
+                const studentName = document.getElementById('studentName').value;
+                if (!studentName) {
+                    alert('请选择学生姓名');
+                    return;
+                }
+                
+                document.getElementById('currentStudent').textContent = studentName;
+                document.getElementById('parentLogin').classList.add('hidden');
+                document.getElementById('parentArea').classList.remove('hidden');
+                
+                // 显示该学生的课程
+                renderParentCourses(studentName);
+            });
+
+            // 家长退出登录事件
+            document.getElementById('parentLogout').addEventListener('click', function() {
+                document.getElementById('parentArea').classList.add('hidden');
+                document.getElementById('parentLogin').classList.remove('hidden');
+                document.getElementById('studentName').value = '';
+            });
+
+            // 初始化应用
+            initApp();
+        });
+
+        // 渲染家长端的课程
+        function renderParentCourses(studentName) {
+            const parentCoursesContainer = document.getElementById('parentCourses');
+            parentCoursesContainer.innerHTML = '';
+            
+            // 找到该学生参加的课程
+            const studentCourses = courses.filter(course => 
+                course.students.includes(studentName)
+            );
+            
+            if (studentCourses.length === 0) {
+                parentCoursesContainer.innerHTML = '<p class="text-gray-500 text-center py-4">没有找到该学生的课程</p>';
+                return;
+            }
+            
+            studentCourses.forEach(course => {
+                const courseElement = document.createElement('div');
+                courseElement.className = 'border border-gray-200 rounded-lg p-4 card-shadow hover:shadow-lg transition-custom';
+                
+                let courseHTML = `
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">${course.name}</h3>
+                    <p class="text-gray-600 mb-4">${course.time} | 共${course.weeks}周 | 从${course.startDate}开始</p>
+                    <div class="space-y-3">
+                `;
+                
+                // 获取该课程的所有周次
+                for (let i = 1; i <= course.weeks; i++) {
+                    const weekKey = `week${i}`;
+                    const weekData = confirmationData[course.id][weekKey];
+                    const date = new Date(weekData.date);
+                    const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    
+                    // 检查是否是过去的日期
+                    const isPast = new Date(weekData.date) < new Date().setHours(0, 0, 0, 0);
+                    
+                    courseHTML += `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                            <div>
+                                <p class="font-medium">第${i}周: ${formattedDate}</p>
+                                <p class="text-sm text-gray-500">${course.time}</p>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button class="attendance-btn px-3 py-1 rounded-md ${weekData.students[studentName] === true ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'}"
+                                        data-course="${course.id}" data-week="${weekKey}" data-status="true"
+                                        ${isPast ? 'disabled' : ''}>
+                                    参加
+                                </button>
+                                <button class="attendance-btn px-3 py-1 rounded-md ${weekData.students[studentName] === false ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'}"
+                                        data-course="${course.id}" data-week="${weekKey}" data-status="false"
+                                        ${isPast ? 'disabled' : ''}>
+                                    不参加
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                courseHTML += `</div>`;
+                courseElement.innerHTML = courseHTML;
+                parentCoursesContainer.appendChild(courseElement);
+            });
+            
+            // 为出勤按钮添加事件监听
+            document.querySelectorAll('.attendance-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const courseId = parseInt(this.getAttribute('data-course'));
+                    const weekKey = this.getAttribute('data-week');
+                    const status = this.getAttribute('data-status') === 'true';
+                    const studentName = document.getElementById('currentStudent').textContent;
+                    
+                    // 更新数据
+                    confirmationData[courseId][weekKey].students[studentName] = status;
+                    saveConfirmationData();
+                    
+                    // 更新UI
+                    const buttons = this.parentElement.querySelectorAll('.attendance-btn');
+                    buttons.forEach(b => {
+                        b.classList.remove('bg-green-100', 'text-green-800', 'border-green-300', 
+                                          'bg-red-100', 'text-red-800', 'border-red-300');
+                        b.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-300');
+                    });
+                    
+                    this.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-300');
+                    if (status) {
+                        this.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+                    } else {
+                        this.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+                    }
+                });
+            });
+        }
+
+        // 初始化应用
+        function initApp() {
+            localStorage.removeItem('confirmationData');
+            confirmationData = {};
+            initConfirmationData();
+        }
+    </script>
+</body>
+</html>
+    
